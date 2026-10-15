@@ -249,9 +249,15 @@ class _HomePageState extends State<HomePage> {
   final List<String> categories = const [
     'Seserahan',
     'Hampers',
-    'Mahar',
-    'Kotak Cincin',
+    'Mahar Kotak',
     'Souvenir',
+  ];
+
+  final List<String> categoryImages = const [
+    'assets/ikon/ikonseserahan.png',
+    'assets/ikon/ikonhampers.png',
+    'assets/ikon/ikonmahar.png',
+    'assets/ikon/ikonsouvenir.png',
   ];
 
   final List<String> products = const [
@@ -271,71 +277,85 @@ class _HomePageState extends State<HomePage> {
         children: [
           const AppHeader(),
           SizedBox(
-            width: double.infinity,
-            height: 136,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(17),
-              child: PageView.builder(
-                controller: _bannerController,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: bannerImages.length,
-                itemBuilder: (context, index) {
-                  return Image.asset(
-                    bannerImages[index],
-                    width: double.infinity,
-                    height: 136,
-                    fit: BoxFit.cover,
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 59,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 48,
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                      ),
-                    ],
+            height: 184,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 136,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(17),
+                    child: PageView.builder(
+                      controller: _bannerController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: bannerImages.length,
+                      itemBuilder: (context, index) {
+                        return Image.asset(
+                          bannerImages[index],
+                          width: double.infinity,
+                          height: 136,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.card_giftcard,
-                        color: Color(0xFFB9A184),
-                        size: 24,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        categories[index],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 7,
-                          fontWeight: FontWeight.w600,
+                ),
+                Positioned(
+                  top: 120,
+                  left: 0,
+                  right: 0,
+                  height: 60,
+                  child: Row(
+                    children: List.generate(categories.length, (index) {
+                      return Expanded(
+                        child: Container(
+                          height: 60,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                categoryImages[index],
+                                width: 34,
+                                height: 34,
+                                fit: BoxFit.contain,
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                categories[index],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      );
+                    }),
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 17),
+          const SizedBox(height: 16),
           const SectionTitle(title: 'Promo Bulan Ini'),
           const SizedBox(height: 8),
           SizedBox(
