@@ -12,6 +12,32 @@ const Color softPink = Color(0xFFFFF4FC);
 const Color pageBg = Color(0xFFF3F3F3);
 const Color muted = Color(0xFF888994);
 
+class CartItem {
+  final String name;
+  final String? price;
+  final String? imageAsset;
+  final String? category;
+  final int quantity;
+
+  const CartItem({
+    required this.name,
+    this.price,
+    this.imageAsset,
+    this.category,
+    this.quantity = 1,
+  });
+
+  CartItem copyWith({int? quantity}) {
+    return CartItem(
+      name: name,
+      price: price,
+      imageAsset: imageAsset,
+      category: category,
+      quantity: quantity ?? this.quantity,
+    );
+  }
+}
+
 class ParcelApp extends StatelessWidget {
   const ParcelApp({super.key});
 
@@ -40,17 +66,56 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int selectedIndex = 0;
+  final List<CartItem> cartItems = [];
 
-  final List<Widget> pages = const [
-    HomePage(),
-    SimplePage(title: 'Keranjang', icon: Icons.shopping_cart_outlined),
-    SimplePage(title: 'Ringkas', icon: Icons.auto_awesome_outlined),
-    HistoryPage(),
-    ProfilePage(),
-  ];
+  void _addToCart(CartItem item) {
+    setState(() {
+      final existingIndex = cartItems.indexWhere(
+        (cartItem) => cartItem.name == item.name,
+      );
+      if (existingIndex == -1) {
+        cartItems.add(item);
+      } else {
+        cartItems[existingIndex] = cartItems[existingIndex].copyWith(
+          quantity: cartItems[existingIndex].quantity + 1,
+        );
+      }
+      selectedIndex = 1;
+    });
+  }
+
+  void _changeCartQuantity(String itemName, int change) {
+    setState(() {
+      final itemIndex = cartItems.indexWhere(
+        (cartItem) => cartItem.name == itemName,
+      );
+      if (itemIndex == -1) return;
+
+      final newQuantity = cartItems[itemIndex].quantity + change;
+      if (newQuantity <= 0) {
+        cartItems.removeAt(itemIndex);
+      } else {
+        cartItems[itemIndex] = cartItems[itemIndex].copyWith(
+          quantity: newQuantity,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomePage(onAddToCart: _addToCart),
+      CartPage(
+        items: cartItems,
+        onIncrease: (name) => _changeCartQuantity(name, 1),
+        onDecrease: (name) => _changeCartQuantity(name, -1),
+      ),
+      const SimplePage(title: 'Ringkas', icon: Icons.auto_awesome_outlined),
+      const HistoryPage(),
+      const ProfilePage(),
+    ];
+
     return Scaffold(
       body: Stack(
         children: [
@@ -59,9 +124,16 @@ class _MainScreenState extends State<MainScreen> {
             left: 0,
             right: 0,
             height: MediaQuery.viewPaddingOf(context).top,
-            child: const ColoredBox(color: Color(0xFFFFF9FF)),
+            child: ColoredBox(
+              color: selectedIndex == 1
+                  ? const Color(0xFFEABFE5)
+                  : selectedIndex == 4
+                  ? const Color(0xFFFFE6EF)
+                  : const Color(0xFFFFF9FF),
+            ),
           ),
           SafeArea(
+            top: selectedIndex != 1 && selectedIndex != 4,
             bottom: false,
             child: IndexedStack(index: selectedIndex, children: pages),
           ),
@@ -258,7 +330,7 @@ class AppHeader extends StatelessWidget {
               height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFE8E8E8),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Row(
@@ -330,7 +402,9 @@ class CircleDot extends StatelessWidget {
 // BERANDA
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final ValueChanged<CartItem> onAddToCart;
+
+  const HomePage({super.key, required this.onAddToCart});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -503,18 +577,31 @@ class _HomePageState extends State<HomePage> {
                   height: 112,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    children: const [
+                    children: [
                       PromoCard(
                         category: 'Seserahan',
                         title: 'Seserahan Pernikahan Aesthetic',
                         price: 'Rp 150.000',
                         imageAsset: 'assets/promo/promoseserahan.png',
+                        onBuy: () => widget.onAddToCart(
+                          const CartItem(
+                            name: 'Seserahan Pernikahan Aesthetic',
+                            price: 'Rp 150.000',
+                            imageAsset: 'assets/promo/promoseserahan.png',
+                          ),
+                        ),
                       ),
-                      SizedBox(width: 9),
+                      const SizedBox(width: 9),
                       PromoCard(
                         category: 'Hampers',
                         title: 'Hampers Pernikahan Premium',
                         price: 'Rp 350.000',
+                        onBuy: () => widget.onAddToCart(
+                          const CartItem(
+                            name: 'Hampers Pernikahan Premium',
+                            price: 'Rp 350.000',
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -527,32 +614,44 @@ class _HomePageState extends State<HomePage> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: products.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 9),
+                    separatorBuilder: (_, _) => const SizedBox(width: 9),
                     itemBuilder: (context, index) {
-                      return Container(
-                        width: 66,
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
+                      return Material(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Image.asset(
-                                productImages[index],
-                                width: 56,
-                                fit: BoxFit.contain,
-                              ),
+                          onTap: () => widget.onAddToCart(
+                            CartItem(
+                              name: products[index],
+                              imageAsset: productImages[index],
                             ),
-                            Text(
-                              products[index],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 8),
+                          ),
+                          child: Container(
+                            width: 66,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ],
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Image.asset(
+                                    productImages[index],
+                                    width: 56,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                Text(
+                                  products[index],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 8),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -654,12 +753,14 @@ class PromoCard extends StatelessWidget {
   final String title;
   final String price;
   final String? imageAsset;
+  final VoidCallback onBuy;
 
   const PromoCard({
     super.key,
     required this.category,
     required this.title,
     required this.price,
+    required this.onBuy,
     this.imageAsset,
   });
 
@@ -705,7 +806,7 @@ class PromoCard extends StatelessWidget {
                 SizedBox(
                   height: 28,
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: onBuy,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(48, 28),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -952,14 +1053,19 @@ class ProfilePage extends StatelessWidget {
           Container(
             height: 220,
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              MediaQuery.viewPaddingOf(context).top + 10,
+              20,
+              20,
+            ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFFFE6EF), Color(0xFFFFEDFB)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
             ),
             child: Column(
               children: [
@@ -1114,7 +1220,373 @@ class ProfileField extends StatelessWidget {
   }
 }
 
-// HALAMAN SEMENTARA
+// KATALOG KERANJANG
+
+class CartPage extends StatefulWidget {
+  final List<CartItem> items;
+  final ValueChanged<String> onIncrease;
+  final ValueChanged<String> onDecrease;
+
+  const CartPage({
+    super.key,
+    required this.items,
+    required this.onIncrease,
+    required this.onDecrease,
+  });
+
+  @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
+  static const List<CartItem> _products = [
+    CartItem(
+      name: 'Seserahan Alat Sholat',
+      price: 'Rp 230.000',
+      imageAsset: 'assets/barang/alatsholat.png',
+      category: 'Seserahan',
+    ),
+    CartItem(
+      name: 'Seserahan Sepatu dan Tas',
+      price: 'Rp 370.000',
+      imageAsset: 'assets/ikon/ikonseserahan.png',
+      category: 'Seserahan',
+    ),
+    CartItem(
+      name: 'Seserahan Pernikahan Aesthetic',
+      price: 'Rp 150.000',
+      imageAsset: 'assets/promo/promoseserahan.png',
+      category: 'Seserahan',
+    ),
+    CartItem(
+      name: 'Hampers Pernikahan Premium',
+      price: 'Rp 350.000',
+      imageAsset: 'assets/ikon/ikonhampers.png',
+      category: 'Hampers',
+    ),
+    CartItem(
+      name: 'Hampers Bunga Segar',
+      price: 'Rp 230.000',
+      imageAsset: 'assets/barang/bungasegar.png',
+      category: 'Hampers',
+    ),
+    CartItem(
+      name: 'Hampers Perawatan Diri',
+      price: 'Rp 140.000',
+      imageAsset: 'assets/barang/bodylotion.png',
+      category: 'Hampers',
+    ),
+    CartItem(
+      name: 'Paket Facial Wash',
+      price: 'Rp 110.000',
+      imageAsset: 'assets/barang/facialwash.png',
+      category: 'Barang',
+    ),
+    CartItem(
+      name: 'Cincin Pernikahan',
+      price: 'Rp 3.000.000',
+      imageAsset: 'assets/barang/cincin.png',
+      category: 'Barang',
+    ),
+  ];
+
+  static const List<Map<String, String>> _categories = [
+    {'name': 'Seserahan', 'image': 'assets/ikon/ikonseserahan.png'},
+    {'name': 'Hampers', 'image': 'assets/ikon/ikonhampers.png'},
+    {'name': 'Mahar', 'image': 'assets/ikon/ikonmahar.png'},
+    {'name': 'Kotak Cincin', 'image': 'assets/ikon/ikonkotakcincin.png'},
+    {'name': 'Souvenir', 'image': 'assets/ikon/ikonsouvenir.png'},
+  ];
+
+  String _selectedCategory = 'Semua';
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleProducts = _products.where((product) {
+      final matchesCategory =
+          _selectedCategory == 'Semua' ||
+          product.category == _selectedCategory;
+      final matchesSearch = product.name.toLowerCase().contains(
+        _searchQuery.toLowerCase(),
+      );
+      return matchesCategory && matchesSearch;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeader(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: const Color(0xFFD8C8D4)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCategory,
+                  icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                  style: const TextStyle(color: Colors.black, fontSize: 10),
+                  items: [
+                    'Semua',
+                    'Seserahan',
+                    'Hampers',
+                    'Barang',
+                  ].map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (category) {
+                    if (category != null) {
+                      setState(() => _selectedCategory = category);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              overscroll: false,
+            ),
+            child: GridView.builder(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 16),
+              itemCount: visibleProducts.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.79,
+              ),
+              itemBuilder: (context, index) {
+                final product = visibleProducts[index];
+                final matchingItems = widget.items.where(
+                  (item) => item.name == product.name,
+                );
+                final quantity = matchingItems.isEmpty
+                    ? 0
+                    : matchingItems.first.quantity;
+                return _buildProductCard(product, quantity);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        14,
+        MediaQuery.viewPaddingOf(context).top + 2,
+        14,
+        12,
+      ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFEABFE5), Color(0xFFDFAFD9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search, color: muted, size: 18),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    style: const TextStyle(fontSize: 10),
+                    decoration: const InputDecoration(
+                      hintText: 'Cari seserahan, souvenir, parcel dan lain lain',
+                      hintStyle: TextStyle(fontSize: 9, color: muted),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Text('Melayani', style: TextStyle(fontSize: 8, color: muted)),
+              SizedBox(width: 7),
+              CircleDot(color: pink),
+              SizedBox(width: 4),
+              Text('Pickup', style: TextStyle(fontSize: 8)),
+              SizedBox(width: 7),
+              CircleDot(color: Colors.orange),
+              SizedBox(width: 4),
+              Text('Delivery', style: TextStyle(fontSize: 8)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 48,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: _categories.map((category) {
+                return Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      final name = category['name']!;
+                      setState(() {
+                        _selectedCategory = name == 'Mahar' ||
+                                name == 'Kotak Cincin' ||
+                                name == 'Souvenir'
+                            ? 'Barang'
+                            : name;
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Image.asset(
+                            category['image']!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        Text(
+                          category['name']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 7),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductCard(CartItem product, int quantity) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  product.imageAsset!,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 3,
+                child: quantity == 0
+                    ? _quantityButton(
+                        icon: Icons.add,
+                        tooltip: 'Tambah ${product.name}',
+                        onPressed: () => widget.onIncrease(product.name),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          color: darkPink,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _quantityButton(
+                              icon: Icons.remove,
+                              tooltip: 'Kurangi ${product.name}',
+                              onPressed: () => widget.onDecrease(product.name),
+                              small: true,
+                            ),
+                            Text(
+                              '$quantity',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            _quantityButton(
+                              icon: Icons.add,
+                              tooltip: 'Tambah ${product.name}',
+                              onPressed: () => widget.onIncrease(product.name),
+                              small: true,
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          product.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 9),
+        ),
+        Text(
+          product.price!,
+          maxLines: 1,
+          style: const TextStyle(fontSize: 9),
+        ),
+      ],
+    );
+  }
+
+  Widget _quantityButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    bool small = false,
+  }) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: BoxConstraints.tightFor(
+        width: small ? 25 : 30,
+        height: small ? 25 : 30,
+      ),
+      icon: Icon(
+        icon,
+        color: Colors.white,
+        size: small ? 14 : 18,
+      ),
+    );
+  }
+}
 
 class SimplePage extends StatelessWidget {
   final String title;
